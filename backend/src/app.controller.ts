@@ -9,4 +9,9 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
+
+  @Get('test')
+  testConnection() {
+    return { message: 'Backend is working!' };
+  }
 }
