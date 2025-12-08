@@ -20,7 +20,11 @@ import { useAuth } from '../../context/AuthContext';
 
 type AuthStackParamList = {
   SignIn: undefined;
-  SignUp: undefined;
+  SignUpEmail: undefined;
+  SignUpName: undefined;
+  SignUpBirthdate: undefined;
+  SignUpGender: undefined;
+  SignUpPassword: undefined;
   SignUpOptions: undefined;
   ForgotPassword: undefined;
   Home: undefined;

@@ -9,12 +9,13 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Alert,
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSignUp } from '../../../context/SignUpContext';
+import ProgressBar from '../../../components/ProgressBar';
 
 type AuthStackParamList = {
   SignIn: undefined;
@@ -28,16 +29,17 @@ type AuthStackParamList = {
   Home: undefined;
 };
 
-type ForgotPasswordScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'ForgotPassword'>;
+type SignUpEmailScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'SignUpEmail'>;
 
-const ACCENT_ORANGE = '#FF6A00';
+const ACCENT_ORANGE = '#F66729';
 const DARK_BACKGROUND = '#0D0A10';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-export default function ForgotPasswordScreen() {
-  const navigation = useNavigation<ForgotPasswordScreenNavigationProp>();
+export default function SignUpEmailScreen() {
+  const navigation = useNavigation<SignUpEmailScreenNavigationProp>();
+  const { signUpData, updateSignUpData } = useSignUp();
   
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(signUpData.email || '');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string }>({});
 
@@ -54,25 +56,19 @@ export default function ForgotPasswordScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSendEmail = async () => {
+  const handleContinue = () => {
     if (!validateForm()) {
       return;
     }
 
     setLoading(true);
+    updateSignUpData({ email: email.trim() });
     
-    // Simulate API call with loading state (0.8-1 second)
+    // Small delay for UX
     setTimeout(() => {
       setLoading(false);
-      
-      // Show success alert
-      Alert.alert('Email Sent', "We've sent you a password reset link.");
-      
-      // Auto-redirect after 1.5 seconds
-      setTimeout(() => {
-        navigation.navigate('SignIn');
-      }, 1500);
-    }, 900);
+      navigation.navigate('SignUpName');
+    }, 300);
   };
 
   return (
@@ -87,22 +83,25 @@ export default function ForgotPasswordScreen() {
       >
         <View style={styles.content}>
           <View style={styles.topSection}>
-            {/* Back Arrow */}
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
+            {/* Top Row: Back Arrow and Progress Bar */}
+            <View style={styles.topRow}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+
+              <View style={styles.progressBarContainer}>
+                <ProgressBar progress={0.2} />
+              </View>
+            </View>
 
             {/* Title */}
             <View style={styles.titleContainer}>
               <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
-                Reset your <Text style={styles.titleAccent}>Password</Text>
-              </Text>
-              <Text style={styles.subtitle}>
-                Enter the email you used to create your account in Redemptor.
+                Enter your <Text style={styles.titleAccent}>Email</Text>
               </Text>
             </View>
 
@@ -127,17 +126,17 @@ export default function ForgotPasswordScreen() {
             </View>
           </View>
 
-          {/* Submit Button */}
+          {/* Continue Button */}
           <TouchableOpacity
-            style={[styles.submitButton, loading && styles.buttonDisabled]}
-            onPress={handleSendEmail}
+            style={[styles.continueButton, loading && styles.buttonDisabled]}
+            onPress={handleContinue}
             disabled={loading}
             activeOpacity={0.8}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.submitButtonText}>Send</Text>
+              <Text style={styles.continueButtonText}>Continue</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -164,15 +163,25 @@ const styles = StyleSheet.create({
   topSection: {
     flex: 1,
   },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 40,
+  },
   backButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'flex-start',
-    marginBottom: 40,
+  },
+  progressBarContainer: {
+    justifyContent: 'center',
+    alignItems: 'flex-end',
   },
   titleContainer: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   title: {
     fontSize: 36,
@@ -184,17 +193,11 @@ const styles = StyleSheet.create({
   titleAccent: {
     color: ACCENT_ORANGE,
   },
-  subtitle: {
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.6)',
-    marginTop: 12,
-    fontWeight: '400',
-  },
   form: {
     width: '100%',
     maxWidth: SCREEN_WIDTH * 0.92,
     alignSelf: 'center',
-    marginBottom: 32,
+    marginTop: 0,
   },
   inputContainer: {
     marginBottom: 18,
@@ -233,7 +236,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginLeft: 24,
   },
-  submitButton: {
+  continueButton: {
     backgroundColor: ACCENT_ORANGE,
     borderRadius: 50,
     paddingVertical: 16,
@@ -262,7 +265,7 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.6,
   },
-  submitButtonText: {
+  continueButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',

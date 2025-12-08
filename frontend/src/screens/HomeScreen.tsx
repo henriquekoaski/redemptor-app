@@ -1,13 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getApiUrl } from '../config/api';
 import { useAuth } from '../context/AuthContext';
+
+type RootStackParamList = {
+  SignIn: undefined;
+  Home: undefined;
+};
+
+type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 const ASTON_MARTIN_GREEN = '#418b61';
 
 export default function HomeScreen() {
   const [message, setMessage] = useState('Loading...');
   const { signOut } = useAuth();
+  const navigation = useNavigation<HomeScreenNavigationProp>();
+
+  const handleSignOut = () => {
+    signOut();
+    navigation.navigate('SignIn');
+  };
 
   useEffect(() => {
     console.log('fetching', getApiUrl('/test'));
@@ -33,7 +48,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>{message}</Text>
-      <TouchableOpacity style={styles.signOutButton} onPress={signOut}>
+      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
         <Text style={styles.signOutText}>Sign Out</Text>
       </TouchableOpacity>
     </View>

@@ -15,7 +15,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 type AuthStackParamList = {
   SignIn: undefined;
-  SignUp: undefined;
+  SignUpEmail: undefined;
+  SignUpName: undefined;
+  SignUpBirthdate: undefined;
+  SignUpGender: undefined;
+  SignUpPassword: undefined;
   SignUpOptions: undefined;
   ForgotPassword: undefined;
   Home: undefined;
@@ -36,7 +40,7 @@ export default function SignUpOptionsScreen() {
   };
 
   const handleEmailSignUp = () => {
-    navigation.navigate('SignUp');
+    navigation.navigate('SignUpEmail');
   };
 
   const handleSignIn = () => {
