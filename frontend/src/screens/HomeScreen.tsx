@@ -62,6 +62,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#111",
     padding: 24,
+    paddingBottom: 100, // Space for floating tab bar
   },
   text: {
     color: "#fff",
