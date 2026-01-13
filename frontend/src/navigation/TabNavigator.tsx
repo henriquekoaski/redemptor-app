@@ -3,14 +3,14 @@ import CustomTabBar from '../components/CustomTabBar';
 import HomeScreen from '../screens/HomeScreen';
 import PlannerScreen from '../screens/PlannerScreen';
 import ExploreScreen from '../screens/ExploreScreen';
-import JourneyScreen from '../screens/JourneyScreen';
+import ProgressScreen from '../screens/ProgressScreen';
 
 export type TabParamList = {
   Home: undefined;
   Planner: undefined;
   FireAction: undefined;
   Explore: undefined;
-  Journey: undefined;
+  Progress: undefined;
 };
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -59,8 +59,8 @@ export default function TabNavigator() {
         }}
       />
       <Tab.Screen
-        name="Journey"
-        component={JourneyScreen}
+        name="Progress"
+        component={ProgressScreen}
         options={{
           tabBarIcon: () => null, // Icon handled in CustomTabBar
         }}

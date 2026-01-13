@@ -8,87 +8,119 @@ import {
   TouchableOpacity,
   Dimensions,
   ImageBackground,
+  FlatList,
+  ImageSourcePropType,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { HABITS_BY_CATEGORY, CATEGORY_CARDS, Habit } from '../data/habitsData';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = width * 0.4;
-const CARD_HEIGHT = CARD_WIDTH * 1.4;
+const CARD_WIDTH = width * 0.48;
+const CARD_HEIGHT = CARD_WIDTH * 1.5;
+const FULL_WIDTH_CARD_WIDTH = width - 48; // Full width minus padding (24 on each side)
+const CATEGORY_CARD_WIDTH = width * 0.6;
+const CATEGORY_CARD_HEIGHT = 100;
 
 interface HabitCardProps {
-  title: string;
-  imageIndex: number;
+  habit: Habit;
 }
 
-// Helper function to get image source based on index
-// Note: Add your images to ../assets/images/ with names habit_background_1.png through habit_background_6.png
-const getHabitImageSource = (index: number): any => {
-  const imageNumber = (index % 6) + 1;
-  
-  // Image map - add more images as you create them
-  const imageMap: { [key: number]: any } = {
-    1: require('../assets/images/habit_background_1.png'),
-    // Uncomment as you add more images:
-    // 2: require('../assets/images/habit_background_2.png'),
-    // 3: require('../assets/images/habit_background_3.png'),
-    // 4: require('../assets/images/habit_background_4.png'),
-    // 5: require('../assets/images/habit_background_5.png'),
-    // 6: require('../assets/images/habit_background_6.png'),
-  };
-  
-  // Use image 1 for all cards until more images are added
-  return imageMap[imageNumber] || imageMap[1] || null;
-};
-
-const HabitCard: React.FC<HabitCardProps> = ({ title, imageIndex }) => {
-  const imageSource = getHabitImageSource(imageIndex);
-  const hasImage = imageSource !== null;
+// Habit Card Component - Uses organized habit data with image mapping
+const HabitCard: React.FC<HabitCardProps> = ({ habit }) => {
+  const { title, imageSource, id } = habit;
+  const isFullWidth = id === 'meditate' || id === 'stop_gambling';
+  const cardWidth = isFullWidth ? FULL_WIDTH_CARD_WIDTH : CARD_WIDTH;
 
   return (
-    <TouchableOpacity style={styles.habitCard} activeOpacity={0.8}>
-      {hasImage ? (
-        <ImageBackground
-          source={imageSource}
-          style={styles.habitCardBackground}
-          imageStyle={styles.habitCardImage}
-          resizeMode="cover"
-        >
-          {/* Dark overlay for text readability */}
-          <View style={styles.habitCardOverlay} />
-          <Text style={styles.habitCardTitle} numberOfLines={2}>
-            {title}
-          </Text>
-        </ImageBackground>
-      ) : (
-        <View style={styles.habitCardBackground}>
-          {/* Dark overlay for text readability (same visual even without image) */}
-          <View style={styles.habitCardOverlay} />
-          <Text style={styles.habitCardTitle} numberOfLines={2}>
-            {title}
-          </Text>
-        </View>
-      )}
+    <TouchableOpacity 
+      style={[
+        styles.habitCard,
+        isFullWidth && styles.habitCardFullWidth
+      ]} 
+      activeOpacity={0.8}
+    >
+      <ImageBackground
+        source={imageSource}
+        style={styles.habitCardBackground}
+        imageStyle={[
+          styles.habitCardImage,
+          { width: cardWidth, height: CARD_HEIGHT }
+        ]}
+        resizeMode="cover"
+      >
+        {/* Dark overlay for text readability */}
+        <View style={styles.habitCardOverlay} />
+        <Text style={styles.habitCardTitle} numberOfLines={2}>
+          {title}
+        </Text>
+      </ImageBackground>
     </TouchableOpacity>
   );
 };
 
+interface CategoryCardProps {
+  title: string;
+  imageSource: ImageSourcePropType;
+}
+
+// Category Card Component - Horizontal orientation
+const CategoryCard: React.FC<CategoryCardProps> = ({ title, imageSource }) => {
+  return (
+    <TouchableOpacity style={styles.categoryCard} activeOpacity={0.85}>
+      <ImageBackground
+        source={imageSource}
+        style={styles.categoryCardBackground}
+        imageStyle={styles.categoryCardImage}
+        resizeMode="cover"
+      >
+        {/* Gradient overlay for premium text readability */}
+        <LinearGradient
+          colors={['rgba(0, 0, 0, 0.3)', 'rgba(0, 0, 0, 0.6)']}
+          style={styles.categoryCardGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+        />
+        <Text style={styles.categoryCardTitle} numberOfLines={2}>
+          {title}
+        </Text>
+      </ImageBackground>
+    </TouchableOpacity>
+  );
+};
+
+// Emoji mapping for each category
+const CATEGORY_EMOJIS: Record<string, string> = {
+  'High Performance': '⚡',
+  '🧠 Protect Your Focus': '', // Emoji already in title
+  '🔥Strong Body, Strong Mind': '', // Emoji already in title
+  '🧘 Mindfulness': '', // Emoji already in title
+  '💰 Smart Finance': '', // Emoji already in title
+  '🧩 Life Organization': '', // Emoji already in title
+};
+
 interface CategorySectionProps {
   title: string;
-  habits: string[];
+  habits: Habit[];
 }
 
 const CategorySection: React.FC<CategorySectionProps> = ({ title, habits }) => {
+  const emoji = title in CATEGORY_EMOJIS ? CATEGORY_EMOJIS[title] : '✨';
+  const displayTitle = emoji ? `${emoji} ${title}` : title;
+  
   return (
     <View style={styles.categorySection}>
-      <Text style={styles.categoryTitle}>{title}</Text>
+      <Text style={styles.categoryTitle}>
+        {displayTitle}
+      </Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.horizontalScrollContent}
         style={styles.horizontalScroll}
       >
-        {habits.map((habit, index) => (
-          <HabitCard key={index} title={habit} imageIndex={index} />
+        {habits.map((habit) => (
+          <HabitCard key={habit.id} habit={habit} />
         ))}
       </ScrollView>
     </View>
@@ -96,75 +128,30 @@ const CategorySection: React.FC<CategorySectionProps> = ({ title, habits }) => {
 };
 
 export default function ExploreScreen() {
-  // Sample data for categories and habits
-  const categories = [
-    {
-      title: 'Productivity',
-      habits: [
-        'Morning Routine',
-        'Time Blocking',
-        'Deep Work',
-        'Task Planning',
-        'Email Management',
-        'Goal Setting',
-      ],
-    },
-    {
-      title: 'Health & Fitness',
-      habits: [
-        'Daily Exercise',
-        'Meditation',
-        'Healthy Eating',
-        'Water Intake',
-        'Sleep Schedule',
-        'Stretching',
-      ],
-    },
-    {
-      title: 'Mindfulness',
-      habits: [
-        'Gratitude Journal',
-        'Breathing Exercises',
-        'Mindful Walking',
-        'Digital Detox',
-        'Nature Connection',
-        'Self Reflection',
-      ],
-    },
-    {
-      title: 'Learning',
-      habits: [
-        'Reading Books',
-        'Online Courses',
-        'Language Practice',
-        'Skill Development',
-        'News Reading',
-        'Podcast Listening',
-      ],
-    },
-    {
-      title: 'Relationships',
-      habits: [
-        'Family Time',
-        'Friend Check-ins',
-        'Date Night',
-        'Random Acts of Kindness',
-        'Social Activities',
-        'Quality Conversations',
-      ],
-    },
-    {
-      title: 'Creativity',
-      habits: [
-        'Creative Writing',
-        'Drawing & Sketching',
-        'Music Practice',
-        'Photography',
-        'Crafting',
-        'Brainstorming',
-      ],
-    },
-  ];
+  const [searchQuery, setSearchQuery] = React.useState('');
+
+  // Filter habits based on search query - return flat list of habits when searching
+  const filteredHabits = React.useMemo(() => {
+    if (!searchQuery.trim()) {
+      return [];
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    const allHabits: Habit[] = [];
+    
+    HABITS_BY_CATEGORY.forEach((category) => {
+      category.habits.forEach((habit) => {
+        const habitTitle = habit.title.toLowerCase();
+        const categoryTitle = category.title.toLowerCase().replace(/[🧠🔥🧘💰🧩⚡]/g, '').trim();
+        
+        if (habitTitle.includes(query) || categoryTitle.includes(query)) {
+          allHabits.push(habit);
+        }
+      });
+    });
+
+    return allHabits;
+  }, [searchQuery]);
 
   return (
     <View style={styles.container}>
@@ -195,17 +182,72 @@ export default function ExploreScreen() {
             placeholderTextColor="#666"
             autoCapitalize="none"
             autoCorrect={false}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setSearchQuery('')}
+              style={styles.clearButton}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="close-circle"
+                size={20}
+                color="#888"
+              />
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Category Sections */}
-        {categories.map((category, index) => (
-          <CategorySection
-            key={index}
-            title={category.title}
-            habits={category.habits}
-          />
-        ))}
+        {/* Category Cards Horizontal List - Hide when searching */}
+        {!searchQuery.trim() && (
+          <View style={styles.categoryCardsContainer}>
+            <FlatList
+              data={CATEGORY_CARDS}
+              renderItem={({ item }) => (
+                <CategoryCard title={item.title} imageSource={item.imageSource} />
+              )}
+              keyExtractor={(item) => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryCardsContent}
+              snapToInterval={CATEGORY_CARD_WIDTH + 16}
+              snapToAlignment="start"
+              decelerationRate="fast"
+            />
+          </View>
+        )}
+
+        {/* Search Results - Show only habit cards when searching */}
+        {searchQuery.trim() ? (
+          filteredHabits.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalScrollContent}
+              style={styles.horizontalScroll}
+            >
+              {filteredHabits.map((habit) => (
+                <HabitCard key={habit.id} habit={habit} />
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.noResultsContainer}>
+              <Text style={styles.noResultsText}>No habits found</Text>
+            </View>
+          )
+        ) : (
+          /* Category Sections - Show when not searching */
+          HABITS_BY_CATEGORY.map((category) => (
+            <CategorySection
+              key={category.id}
+              title={category.title}
+              habits={category.habits}
+            />
+          ))
+        )}
 
         {/* Bottom spacing for tab bar */}
         <View style={styles.bottomSpacing} />
@@ -217,7 +259,7 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111',
+    backgroundColor: '#000',
   },
   fixedTitleContainer: {
     position: 'absolute',
@@ -227,7 +269,7 @@ const styles = StyleSheet.create({
     paddingTop: 65,
     paddingBottom: 8,
     paddingHorizontal: 24,
-    backgroundColor: '#111',
+    backgroundColor: '#000',
     zIndex: 1000,
     shadowColor: '#000',
     shadowOffset: {
@@ -275,6 +317,64 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '400',
   },
+  clearButton: {
+    marginLeft: 8,
+    padding: 4,
+  },
+  categoryCardsContainer: {
+    marginBottom: 32,
+  },
+  categoryCardsContent: {
+    paddingLeft: 24,
+    paddingRight: 24,
+    gap: 16,
+  },
+  categoryCard: {
+    width: CATEGORY_CARD_WIDTH,
+    height: CATEGORY_CARD_HEIGHT,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#1C1C1C',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  categoryCardBackground: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1C1C1C',
+  },
+  categoryCardImage: {
+    width: CATEGORY_CARD_WIDTH,
+    height: CATEGORY_CARD_HEIGHT,
+  },
+  categoryCardGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 12,
+  },
+  categoryCardTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: -0.5,
+    zIndex: 1,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
   categorySection: {
     marginBottom: 32,
   },
@@ -296,7 +396,7 @@ const styles = StyleSheet.create({
   habitCard: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
-    borderRadius: 24,
+    borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#1C1C1C', // Fallback background color
     shadowColor: '#000',
@@ -307,6 +407,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 4,
+  },
+  habitCardFullWidth: {
+    width: FULL_WIDTH_CARD_WIDTH,
   },
   habitCardBackground: {
     width: '100%',
@@ -326,7 +429,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.25)',
-    borderRadius: 24,
+    borderRadius: 12,
   },
   habitCardTitle: {
     fontSize: 18,
@@ -337,5 +440,15 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 20,
+  },
+  noResultsContainer: {
+    paddingVertical: 60,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  noResultsText: {
+    fontSize: 16,
+    color: '#888',
+    fontWeight: '400',
   },
 });

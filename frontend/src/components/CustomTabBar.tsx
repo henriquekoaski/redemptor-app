@@ -12,7 +12,7 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BlurView } from 'expo-blur';
-import { Home, CalendarRange, Flame, Plus, Search, Route } from 'lucide-react-native';
+import { Home, CalendarClock, Flame, Plus, Search, BarChart } from 'lucide-react-native';
 
 type RootStackParamList = {
   Auth: undefined;
@@ -40,10 +40,10 @@ export default function CustomTabBar({
   const tabs = state.routes;
   const tabConfig = [
     { name: 'Home', icon: Home, label: 'Home' },
-    { name: 'Planner', icon: CalendarRange, label: 'Planner' },
+    { name: 'Planner', icon: CalendarClock, label: 'Planner' },
     { name: 'FireAction', icon: Flame, label: '' }, // Center button, no label
     { name: 'Explore', icon: Search, label: 'Explore' },
-    { name: 'Journey', icon: Route, label: 'Journey' },
+    { name: 'Progress', icon: BarChart, label: 'Progress' },
   ];
 
   const handleFireActionPress = () => {
