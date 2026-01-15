@@ -24,8 +24,11 @@ interface Task {
 export default function PlannerScreen() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskName, setTaskName] = useState('');
+  const [taskDescription, setTaskDescription] = useState('');
   const [taskIcon, setTaskIcon] = useState('');
   const [isTimed, setIsTimed] = useState(false);
   const [taskTime, setTaskTime] = useState('');
@@ -40,6 +43,10 @@ export default function PlannerScreen() {
   const modalSlideAnim = useRef(new Animated.Value(0)).current;
   const keyboardOffset = useRef(new Animated.Value(0)).current;
   const modalTranslateY = useRef(new Animated.Value(600)).current;
+  const nameInputBorderColor = useRef(new Animated.Value(0)).current;
+  const descriptionInputBorderColor = useRef(new Animated.Value(0)).current;
+  const calendarTranslateY = useRef(new Animated.Value(-600)).current;
+  const calendarOpacity = useRef(new Animated.Value(0)).current;
   
   const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   
@@ -175,12 +182,24 @@ export default function PlannerScreen() {
 
     // Only process horizontal swipes (horizontal movement > vertical movement)
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > swipeThreshold) {
-      if (deltaX > 0) {
-        // Swipe right - go to previous day
-        changeDate('right');
+      if (showCalendarModal) {
+        // Calendar is open - change month
+        if (deltaX > 0) {
+          // Swipe right - go to previous month
+          changeCalendarMonth('prev');
+        } else {
+          // Swipe left - go to next month
+          changeCalendarMonth('next');
+        }
       } else {
-        // Swipe left - go to next day
-        changeDate('left');
+        // Calendar is closed - change day
+        if (deltaX > 0) {
+          // Swipe right - go to previous day
+          changeDate('right');
+        } else {
+          // Swipe left - go to next day
+          changeDate('left');
+        }
       }
     }
 
@@ -232,6 +251,7 @@ export default function PlannerScreen() {
       setShowTaskModal(false);
       // Reset form
       setTaskName('');
+      setTaskDescription('');
       setTaskIcon('');
       setIsTimed(false);
       setTaskTime('');
@@ -240,7 +260,9 @@ export default function PlannerScreen() {
       setSameDayTimes(['']);
       setRepeatWeek(false);
       setSelectedDays([]);
-      // Reset keyboard offset
+      // Reset animated values
+      nameInputBorderColor.setValue(0);
+      descriptionInputBorderColor.setValue(0);
       keyboardOffset.setValue(0);
     });
   };
@@ -373,12 +395,176 @@ export default function PlannerScreen() {
     return time;
   };
 
+  const getTasksForDate = (date: Date) => {
+    const dayOfWeek = date.getDay();
+    const dateStr = date.toDateString();
+
+    return tasks.filter(task => {
+      if (!task.isRepeat) {
+        return task.createdAt.toDateString() === dateStr;
+      }
+      
+      if (task.repeatSameDay && task.sameDayTimes.length > 0) {
+        return true;
+      }
+      
+      if (task.repeatWeek && task.selectedDays.includes(dayOfWeek)) {
+        return true;
+      }
+      
+      return false;
+    });
+  };
+
+
+  // Calendar functions
+  const openCalendarModal = () => {
+    setCalendarMonth(new Date(currentDate));
+    setShowCalendarModal(true);
+    Animated.parallel([
+      Animated.spring(calendarTranslateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 50,
+        friction: 7,
+      }),
+      Animated.timing(calendarOpacity, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeCalendarModal = () => {
+    Animated.parallel([
+      Animated.spring(calendarTranslateY, {
+        toValue: -600,
+        useNativeDriver: true,
+        tension: 50,
+        friction: 7,
+      }),
+      Animated.timing(calendarOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowCalendarModal(false);
+    });
+  };
+
+  const handleDateSelect = (date: Date) => {
+    setCurrentDate(date);
+    closeCalendarModal();
+  };
+
+  const changeCalendarMonth = (direction: 'prev' | 'next') => {
+    const newMonth = new Date(calendarMonth);
+    if (direction === 'prev') {
+      newMonth.setMonth(newMonth.getMonth() - 1);
+    } else {
+      newMonth.setMonth(newMonth.getMonth() + 1);
+    }
+    setCalendarMonth(newMonth);
+  };
+
+  const getCalendarDays = () => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    
+    // First day of the month
+    const firstDay = new Date(year, month, 1);
+    const firstDayOfWeek = firstDay.getDay();
+    
+    // Last day of the month
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    
+    // Previous month's days to fill the first week
+    const prevMonth = new Date(year, month, 0);
+    const daysInPrevMonth = prevMonth.getDate();
+    
+    const days: (Date | null)[] = [];
+    
+    // Add previous month's trailing days
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+      days.push(new Date(year, month - 1, daysInPrevMonth - i));
+    }
+    
+    // Add current month's days
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(new Date(year, month, i));
+    }
+    
+    // Add next month's leading days to fill the last week
+    const remainingDays = 42 - days.length; // 6 weeks * 7 days
+    for (let i = 1; i <= remainingDays; i++) {
+      days.push(new Date(year, month + 1, i));
+    }
+    
+    return days;
+  };
+
+  const isSameDay = (date1: Date, date2: Date) => {
+    return (
+      date1.getDate() === date2.getDate() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getFullYear() === date2.getFullYear()
+    );
+  };
+
+  const isCurrentMonth = (date: Date) => {
+    return (
+      date.getMonth() === calendarMonth.getMonth() &&
+      date.getFullYear() === calendarMonth.getFullYear()
+    );
+  };
+
+  const formatMonthYear = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric',
+    });
+  };
+
+  const formatMonthYearCapitalized = (date: Date) => {
+    const formatted = formatMonthYear(date);
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  };
+
   return (
     <View 
       style={styles.container}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
+      {/* Upper Tap Bar */}
+      <View style={styles.upperTapBar}>
+        <BlurView
+          intensity={80}
+          tint="dark"
+          style={styles.upperTapBarBlur}
+        >
+          <View style={styles.upperTapBarContent}>
+            <TouchableOpacity 
+              style={styles.upperTapBarButton}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="grid-outline" size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+            <View style={styles.upperTapBarDivider} />
+            <TouchableOpacity 
+              style={styles.upperTapBarButton}
+              activeOpacity={0.8}
+              onPress={openCalendarModal}
+            >
+              <Calendar size={18} color="#FFFFFF" strokeWidth={2} />
+            </TouchableOpacity>
+          </View>
+        </BlurView>
+      </View>
+
       <Animated.View 
         style={[
           styles.dateContainer,
@@ -402,20 +588,6 @@ export default function PlannerScreen() {
             <Text style={styles.dayName}>{formatDayName(currentDate)}</Text>
             <Text style={styles.date}>{formatDate(currentDate)}</Text>
           </View>
-          <TouchableOpacity 
-            style={styles.calendarButton}
-            activeOpacity={0.8}
-          >
-            <BlurView
-              intensity={80}
-              tint="dark"
-              style={styles.calendarButtonBlur}
-            >
-              <View style={styles.calendarButtonContent}>
-                <Calendar size={24} color="#FFFFFF" strokeWidth={2} />
-              </View>
-            </BlurView>
-          </TouchableOpacity>
         </View>
       </Animated.View>
 
@@ -476,31 +648,37 @@ export default function PlannerScreen() {
               >
                 <View style={styles.modalContent}>
                   <View style={styles.modalHeader}>
-                    <View style={{ flex: 1 }} />
-                    <TouchableOpacity onPress={closeTaskModal}>
+                    <View style={styles.headerFieldsContainer}>
+                      {/* Name Field */}
+                      <View style={styles.nameField}>
+                        <TextInput
+                          style={styles.nameInputModalLarge}
+                          placeholder="Name"
+                          placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                          value={taskName}
+                          onChangeText={setTaskName}
+                          autoFocus={true}
+                          selectionColor="#F66729"
+                        />
+                      </View>
+
+                      {/* Description Field */}
+                      <View style={styles.descriptionField}>
+                        <TextInput
+                          style={styles.nameInputModal}
+                          placeholder="Description (Optional)"
+                          placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                          value={taskDescription}
+                          onChangeText={setTaskDescription}
+                          selectionColor="#F66729"
+                        />
+                      </View>
+                    </View>
+                    <TouchableOpacity onPress={closeTaskModal} style={styles.closeButton}>
                       <Ionicons name="close" size={24} color="#FFFFFF" />
                     </TouchableOpacity>
                   </View>
                   <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-                    {/* Name and Icon Row */}
-                    <View style={styles.nameIconRow}>
-                      <View style={styles.nameField}>
-                        <Text style={styles.fieldLabel}>Name</Text>
-                        <TextInput
-                          style={styles.nameInput}
-                          placeholder="Enter task name"
-                          placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                          value={taskName}
-                          onChangeText={setTaskName}
-                        />
-                      </View>
-                      <View style={styles.iconField}>
-                        <Text style={styles.fieldLabel}>Icon</Text>
-                        <TouchableOpacity style={styles.iconButton}>
-                          <Text style={styles.iconButtonText}>{taskIcon || '😊'}</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
 
                     {/* Timed Section */}
                     <View style={styles.section}>
@@ -632,6 +810,126 @@ export default function PlannerScreen() {
           </Animated.View>
         </Pressable>
       </Modal>
+
+      {/* Calendar Modal - Emerges from top */}
+      <Modal
+        visible={showCalendarModal}
+        transparent={true}
+        animationType="none"
+        onRequestClose={closeCalendarModal}
+      >
+        <Pressable style={styles.calendarModalOverlay} onPress={closeCalendarModal}>
+          <Animated.View
+            style={[
+              styles.calendarModalContainer,
+              {
+                opacity: calendarOpacity,
+                transform: [{ translateY: calendarTranslateY }],
+              },
+            ]}
+          >
+            <Pressable onPress={(e) => e.stopPropagation()}>
+              <BlurView
+                intensity={80}
+                tint="dark"
+                style={styles.calendarModalBlur}
+              >
+                <View 
+                  style={styles.calendarModalContent}
+                  onTouchStart={handleTouchStart}
+                  onTouchEnd={handleTouchEnd}
+                >
+                  {/* Calendar Header */}
+                  <View style={styles.calendarHeader}>
+                    <TouchableOpacity
+                      onPress={() => changeCalendarMonth('prev')}
+                      style={styles.calendarNavButton}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+                    </TouchableOpacity>
+                    <Text style={styles.calendarMonthYear}>
+                      {formatMonthYearCapitalized(calendarMonth)}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => changeCalendarMonth('next')}
+                      style={styles.calendarNavButton}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="chevron-forward" size={24} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Calendar Days of Week Header */}
+                  <View style={styles.calendarWeekHeader}>
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
+                      <View key={index} style={styles.calendarWeekDayHeader}>
+                        <Text style={styles.calendarWeekDayText}>{day}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Calendar Grid */}
+                  <View style={styles.calendarGrid}>
+                    {getCalendarDays().map((date, index) => {
+                      if (!date) return null;
+                      const isSelected = isSameDay(date, currentDate);
+                      const isCurrentMonthDay = isCurrentMonth(date);
+                      const isToday = isSameDay(date, new Date());
+                      const dayTasks = getTasksForDate(date);
+                      const hasTasks = dayTasks.length > 0;
+
+                      return (
+                        <TouchableOpacity
+                          key={index}
+                          style={[
+                            styles.calendarDay,
+                            !isCurrentMonthDay && styles.calendarDayOtherMonth,
+                            isSelected && styles.calendarDaySelected,
+                          ]}
+                          onPress={() => handleDateSelect(date)}
+                          activeOpacity={0.7}
+                          disabled={!isCurrentMonthDay}
+                        >
+                          <Text
+                            style={[
+                              styles.calendarDayText,
+                              !isCurrentMonthDay && styles.calendarDayTextOtherMonth,
+                              isSelected && styles.calendarDayTextSelected,
+                              isToday && !isSelected && styles.calendarDayTextToday,
+                            ]}
+                          >
+                            {date.getDate()}
+                          </Text>
+                          {hasTasks && !isSelected && (
+                            <View style={styles.calendarTaskIndicator}>
+                              {dayTasks.length === 1 ? (
+                                <View style={styles.calendarTaskDot} />
+                              ) : (
+                                <View style={styles.calendarTaskDots}>
+                                  {dayTasks.slice(0, 3).map((_, i) => (
+                                    <View 
+                                      key={i} 
+                                      style={[
+                                        styles.calendarTaskDot,
+                                        i > 0 && { marginLeft: 3 }
+                                      ]} 
+                                    />
+                                  ))}
+                                </View>
+                              )}
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              </BlurView>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -642,6 +940,49 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1A1A',
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingHorizontal: 24,
+  },
+  upperTapBar: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    right: 24,
+    zIndex: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: {
+          width: 0,
+          height: 4,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  upperTapBarBlur: {
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  upperTapBarContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  upperTapBarButton: {
+    padding: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  upperTapBarDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    marginHorizontal: 4,
   },
   dateContainer: {
     alignItems: 'flex-start',
@@ -749,40 +1090,6 @@ const styles = StyleSheet.create({
   dateTextContainer: {
     flex: 1,
   },
-  calendarButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 12,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: {
-          width: 0,
-          height: 4,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
-  },
-  calendarButtonBlur: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  calendarButtonContent: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   bookmarkContainer: {
     position: 'relative',
     marginBottom: 8,
@@ -857,7 +1164,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'transparent',
     justifyContent: 'flex-end',
     alignItems: 'center',
     paddingBottom: Platform.OS === 'ios' ? 20 : 10,
@@ -887,8 +1194,15 @@ const styles = StyleSheet.create({
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 20,
+  },
+  headerFieldsContainer: {
+    flex: 1,
+    marginRight: 16,
+  },
+  closeButton: {
+    padding: 4,
   },
   modalTitle: {
     fontSize: 24,
@@ -899,16 +1213,36 @@ const styles = StyleSheet.create({
   modalBody: {
     maxHeight: 500,
   },
-  nameIconRow: {
-    flexDirection: 'row',
-    marginBottom: 24,
-  },
   nameField: {
-    flex: 1,
+    marginTop: 0,
+    marginBottom: 0,
   },
-  iconField: {
-    width: 80,
-    marginLeft: 12,
+  descriptionField: {
+    marginTop: -25,
+    marginBottom: 0,
+  },
+  nameInputModalWrapper: {
+    width: '100%',
+    borderBottomWidth: 1,
+    backgroundColor: 'transparent',
+  },
+  nameInputModal: {
+    width: '100%',
+    paddingVertical: 12,
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+  },
+  nameInputModalLarge: {
+    width: '100%',
+    paddingVertical: 20,
+    fontSize: 24,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
   },
   fieldLabel: {
     fontSize: 14,
@@ -940,32 +1274,6 @@ const styles = StyleSheet.create({
         elevation: 2,
       },
     }),
-  },
-  iconButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 0,
-    borderRadius: 50,
-    paddingVertical: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 56,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: {
-          width: 0,
-          height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  iconButtonText: {
-    fontSize: 24,
   },
   section: {
     marginBottom: 24,
@@ -1082,5 +1390,117 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: 0.3,
+  },
+  calendarModalOverlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+  },
+  calendarModalContainer: {
+    width: '100%',
+    paddingHorizontal: 20,
+  },
+  calendarModalBlur: {
+    borderRadius: 36,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  calendarModalContent: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 36,
+    padding: 24,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  calendarNavButton: {
+    padding: 8,
+  },
+  calendarMonthYear: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+    textTransform: 'capitalize',
+  },
+  calendarWeekHeader: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  calendarWeekDayHeader: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  calendarWeekDayText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.6)',
+    textTransform: 'lowercase',
+    letterSpacing: 0.3,
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  calendarDay: {
+    width: `${100 / 7}%`,
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    position: 'relative',
+  },
+  calendarDayOtherMonth: {
+    opacity: 0.3,
+  },
+  calendarDaySelected: {
+    backgroundColor: '#F66729',
+    borderRadius: 20,
+  },
+  calendarDayText: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  calendarDayTextOtherMonth: {
+    color: 'rgba(255, 255, 255, 0.4)',
+  },
+  calendarDayTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  calendarDayTextToday: {
+    color: '#F66729',
+    fontWeight: '500',
+  },
+  calendarTaskIndicator: {
+    position: 'absolute',
+    bottom: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calendarTaskDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calendarTaskDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#9D4EDD',
   },
 });
