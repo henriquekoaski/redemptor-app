@@ -25,7 +25,9 @@ export default function PlannerScreen() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [showWeekOverviewModal, setShowWeekOverviewModal] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [weekOverviewDate, setWeekOverviewDate] = useState(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskName, setTaskName] = useState('');
   const [taskDescription, setTaskDescription] = useState('');
@@ -47,6 +49,8 @@ export default function PlannerScreen() {
   const descriptionInputBorderColor = useRef(new Animated.Value(0)).current;
   const calendarTranslateY = useRef(new Animated.Value(-600)).current;
   const calendarOpacity = useRef(new Animated.Value(0)).current;
+  const weekOverviewTranslateY = useRef(new Animated.Value(-600)).current;
+  const weekOverviewOpacity = useRef(new Animated.Value(0)).current;
   
   const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   
@@ -533,6 +537,113 @@ export default function PlannerScreen() {
     return formatted.charAt(0).toUpperCase() + formatted.slice(1);
   };
 
+  // Week Overview functions
+  const openWeekOverviewModal = () => {
+    setWeekOverviewDate(new Date(currentDate));
+    setShowWeekOverviewModal(true);
+    Animated.parallel([
+      Animated.spring(weekOverviewTranslateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 50,
+        friction: 7,
+      }),
+      Animated.timing(weekOverviewOpacity, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeWeekOverviewModal = () => {
+    Animated.parallel([
+      Animated.spring(weekOverviewTranslateY, {
+        toValue: -600,
+        useNativeDriver: true,
+        tension: 50,
+        friction: 7,
+      }),
+      Animated.timing(weekOverviewOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowWeekOverviewModal(false);
+    });
+  };
+
+  const changeWeekOverviewWeek = (direction: 'prev' | 'next') => {
+    const newDate = new Date(weekOverviewDate);
+    if (direction === 'prev') {
+      newDate.setDate(newDate.getDate() - 7);
+    } else {
+      newDate.setDate(newDate.getDate() + 7);
+    }
+    setWeekOverviewDate(newDate);
+  };
+
+  const getWeekNumber = (date: Date): number => {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  };
+
+  const getWeekDates = (date: Date): Date[] => {
+    const weekDates: Date[] = [];
+    const dayOfWeek = date.getDay();
+    const startOfWeek = new Date(date);
+    startOfWeek.setDate(date.getDate() - dayOfWeek);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    // Show exactly 9 days (3x3 grid)
+    for (let i = 0; i < 9; i++) {
+      const day = new Date(startOfWeek);
+      day.setDate(startOfWeek.getDate() + i);
+      weekDates.push(day);
+    }
+    return weekDates;
+  };
+
+  const getWeekRange = (date: Date): { start: Date; end: Date } => {
+    const dayOfWeek = date.getDay();
+    const startOfWeek = new Date(date);
+    startOfWeek.setDate(date.getDate() - dayOfWeek);
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    
+    return { start: startOfWeek, end: endOfWeek };
+  };
+
+  const formatWeekTitle = (date: Date): string => {
+    const weekNum = getWeekNumber(date);
+    const { start, end } = getWeekRange(date);
+    const startDay = start.getDate();
+    const endDay = end.getDate();
+    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+    
+    if (startMonth === endMonth) {
+      return `Week ${weekNum}, ${startDay} - ${endDay} ${startMonth}`;
+    } else {
+      return `Week ${weekNum}, ${startDay} ${startMonth} - ${endDay} ${endMonth}`;
+    }
+  };
+
+  const formatDayShort = (date: Date): string => {
+    return date.toLocaleDateString('en-US', { weekday: 'short' });
+  };
+
+  const formatDayNumber = (date: Date): string => {
+    return date.getDate().toString();
+  };
+
   return (
     <View 
       style={styles.container}
@@ -550,16 +661,9 @@ export default function PlannerScreen() {
             <TouchableOpacity 
               style={styles.upperTapBarButton}
               activeOpacity={0.8}
-            >
-              <Ionicons name="grid-outline" size={18} color="#FFFFFF" />
-            </TouchableOpacity>
-            <View style={styles.upperTapBarDivider} />
-            <TouchableOpacity 
-              style={styles.upperTapBarButton}
-              activeOpacity={0.8}
               onPress={openCalendarModal}
             >
-              <Calendar size={18} color="#FFFFFF" strokeWidth={2} />
+              <Calendar size={24} color="#FFFFFF" strokeWidth={2} />
             </TouchableOpacity>
           </View>
         </BlurView>
@@ -930,6 +1034,142 @@ export default function PlannerScreen() {
           </Animated.View>
         </Pressable>
       </Modal>
+
+      {/* Week Overview Modal - Emerges from top */}
+      <Modal
+        visible={showWeekOverviewModal}
+        transparent={true}
+        animationType="none"
+        onRequestClose={closeWeekOverviewModal}
+      >
+        <Pressable style={styles.weekOverviewModalOverlay} onPress={closeWeekOverviewModal}>
+          <Animated.View
+            style={[
+              styles.calendarModalContainer,
+              {
+                opacity: weekOverviewOpacity,
+                transform: [{ translateY: weekOverviewTranslateY }],
+              },
+            ]}
+          >
+            <Pressable onPress={(e) => e.stopPropagation()}>
+              <BlurView
+                intensity={80}
+                tint="dark"
+                style={styles.calendarModalBlur}
+              >
+                <View style={styles.calendarModalContent}>
+                  {/* Week Days Cards - 3x3 Grid */}
+                  <View style={styles.weekOverviewGrid}>
+                    {getWeekDates(weekOverviewDate).map((day, index) => {
+                      const dayTasks = getTasksForDate(day);
+                      const scheduledTasks = dayTasks.filter(task => {
+                        if (task.isTimed && task.time) return true;
+                        if (task.repeatSameDay && task.sameDayTimes.length > 0) return true;
+                        return false;
+                      });
+                      const anytimeTasks = dayTasks.filter(task => {
+                        if (task.isTimed && task.time) return false;
+                        if (task.repeatSameDay && task.sameDayTimes.length > 0) return false;
+                        return true;
+                      });
+                      const isToday = isSameDay(day, new Date());
+
+                      const isLastColumn = index % 3 === 2;
+                      const isLastRow = index >= 6;
+                      
+                      return (
+                        <View 
+                          key={index} 
+                          style={[
+                            styles.weekDayCard,
+                            !isLastColumn && styles.weekDayCardRightBorder,
+                            !isLastRow && styles.weekDayCardBottomBorder,
+                          ]}
+                        >
+                          <View style={styles.weekDayCardHeader}>
+                            <View>
+                              <Text style={styles.weekDayName}>{formatDayShort(day)}</Text>
+                              <Text style={[styles.weekDayNumber, isToday && styles.weekDayNumberToday]}>
+                                {formatDayNumber(day)}
+                              </Text>
+                            </View>
+                            {isToday && (
+                              <View style={styles.weekDayTodayBadge}>
+                                <Text style={styles.weekDayTodayBadgeText}>Today</Text>
+                              </View>
+                            )}
+                          </View>
+                          
+                          {scheduledTasks.length > 0 && (
+                            <View style={styles.weekDayTasksSection}>
+                              <Text style={styles.weekDayTasksSectionTitle}>Scheduled</Text>
+                              {scheduledTasks.slice(0, 2).map((task) => (
+                                <View key={task.id} style={styles.weekDayTaskItem}>
+                                  {task.icon && (
+                                    <Text style={styles.weekDayTaskIcon}>{task.icon}</Text>
+                                  )}
+                                  <View style={styles.weekDayTaskContent}>
+                                    <Text style={styles.weekDayTaskName} numberOfLines={1}>
+                                      {task.name}
+                                    </Text>
+                                    {task.isTimed && task.time && (
+                                      <Text style={styles.weekDayTaskTime}>{task.time}</Text>
+                                    )}
+                                    {task.repeatSameDay && task.sameDayTimes.length > 0 && (
+                                      <Text style={styles.weekDayTaskTime}>
+                                        {task.sameDayTimes.length} time{task.sameDayTimes.length > 1 ? 's' : ''}
+                                      </Text>
+                                    )}
+                                  </View>
+                                </View>
+                              ))}
+                              {scheduledTasks.length > 2 && (
+                                <Text style={styles.weekDayTaskMore}>
+                                  +{scheduledTasks.length - 2} more
+                                </Text>
+                              )}
+                            </View>
+                          )}
+
+                          {anytimeTasks.length > 0 && (
+                            <View style={styles.weekDayTasksSection}>
+                              <Text style={styles.weekDayTasksSectionTitle}>Anytime</Text>
+                              {anytimeTasks.slice(0, 2).map((task) => (
+                                <View key={task.id} style={styles.weekDayTaskItem}>
+                                  {task.icon && (
+                                    <Text style={styles.weekDayTaskIcon}>{task.icon}</Text>
+                                  )}
+                                  <View style={styles.weekDayTaskContent}>
+                                    <Text style={styles.weekDayTaskName} numberOfLines={1}>
+                                      {task.name}
+                                    </Text>
+                                  </View>
+                                </View>
+                              ))}
+                              {anytimeTasks.length > 2 && (
+                                <Text style={styles.weekDayTaskMore}>
+                                  +{anytimeTasks.length - 2} more
+                                </Text>
+                              )}
+                            </View>
+                          )}
+
+                          {dayTasks.length === 0 && (
+                            <View style={styles.weekDayEmpty}>
+                              <Text style={styles.weekDayEmptyText}>No tasks</Text>
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+              </BlurView>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -974,7 +1214,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   upperTapBarButton: {
-    padding: 8,
+    padding: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1398,9 +1638,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
   },
+  weekOverviewModalOverlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 180,
+  },
   calendarModalContainer: {
     width: '100%',
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
   },
   calendarModalBlur: {
     borderRadius: 36,
@@ -1502,5 +1750,127 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     backgroundColor: '#9D4EDD',
+  },
+  weekOverviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  weekOverviewTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+    flex: 1,
+    textAlign: 'center',
+  },
+  weekOverviewScroll: {
+    maxHeight: 500,
+    marginTop: 8,
+  },
+  weekOverviewGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  weekDayCard: {
+    width: '31%',
+    marginBottom: 0,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    minHeight: 160,
+  },
+  weekDayCardRightBorder: {
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  weekDayCardBottomBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  weekDayCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  weekDayName: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.6)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  weekDayNumber: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+  },
+  weekDayNumberToday: {
+    color: '#F66729',
+  },
+  weekDayTodayBadge: {
+    backgroundColor: '#F66729',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  weekDayTodayBadgeText: {
+    fontSize: 8,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  weekDayTasksSection: {
+    marginBottom: 8,
+  },
+  weekDayTasksSectionTitle: {
+    fontSize: 8,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.5)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  weekDayTaskItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    paddingVertical: 3,
+  },
+  weekDayTaskIcon: {
+    fontSize: 12,
+    marginRight: 6,
+  },
+  weekDayTaskContent: {
+    flex: 1,
+  },
+  weekDayTaskName: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    marginBottom: 1,
+  },
+  weekDayTaskTime: {
+    fontSize: 8,
+    color: 'rgba(255, 255, 255, 0.5)',
+  },
+  weekDayTaskMore: {
+    fontSize: 8,
+    color: 'rgba(255, 255, 255, 0.4)',
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  weekDayEmpty: {
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  weekDayEmptyText: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.3)',
   },
 });

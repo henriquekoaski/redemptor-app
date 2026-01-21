@@ -15,74 +15,31 @@ import { ImageSourcePropType } from 'react-native';
 // Normalize habit names: lowercase, replace spaces with underscores
 export const HABIT_IMAGES_MAP: Record<string, ImageSourcePropType> = {
   // High Performance habits
-  'wake_up_early': require('../assets/images/habit_wake_up_early.png'),
-  'daily_weekly_planning': require('../assets/images/habit_background_1.png'),
-  
-  // Productivity habits (legacy)
-  'morning_routine': require('../assets/images/habit_background_1.png'),
-  'time_blocking': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'deep_work': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'task_planning': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'email_management': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'goal_setting': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
+  'wake_up_early': require('../assets/images/habit-card-covers/habit-cover-bg-wake-up.png'),
+  'daily_weekly_planning': require('../assets/images/habit-card-covers/habit-cover-bg-planning.png'),
 
   // Protect Your Focus habits
-  'block_social_media': require('../assets/images/habit_background_1.png'),
-  'block_games': require('../assets/images/habit_background_1.png'),
-  'block_phone_calls_only': require('../assets/images/habit_background_1.png'),
-  
-  // Health & Fitness habits (legacy)
-  'daily_exercise': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'meditation': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'healthy_eating': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'water_intake': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'sleep_schedule': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'stretching': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
+  'block_social_media': require('../assets/images/habit-card-covers/habit-cover-bg-block-social-media.png'),
+  'block_games': require('../assets/images/habit-card-covers/habit-cover-bg-block-games.png'),
+  'block_phone_calls_only': require('../assets/images/habit-card-covers/habit-cover-bg-block-phone.png'),
 
   // Strong Body, Strong Mind habits
-  'block_porn_sites': require('../assets/images/habit_background_1.png'),
-  'drink_water': require('../assets/images/habit_background_1.png'),
-  'work_out': require('../assets/images/habit_background_1.png'),
-  'run_or_walk_outside': require('../assets/images/habit_background_1.png'),
-  'brush_your_teeth': require('../assets/images/habit_background_1.png'),
-  
-  // Mindfulness habits (legacy)
-  'gratitude_journal': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'breathing_exercises': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'mindful_walking': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'digital_detox': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'nature_connection': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'self_reflection': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
+  'block_porn': require('../assets/images/habit-card-covers/habit-cover-bg-block-porn.png'),
+  'drink_water': require('../assets/images/habit-card-covers/habit-cover-bg-drink-water.png'),
+  'work_out': require('../assets/images/habit-card-covers/habit-cover-bg-work-out.png'),
+  'run_or_walk_outside': require('../assets/images/habit-card-covers/habit-cover-bg-walk-run.png'),
+  'brush_your_teeth': require('../assets/images/habit-card-covers/habit-cover-bg-brush-teeth.png'),
 
   // Mindfulness habits
-  'meditate': require('../assets/images/habit_background_1.png'),
-  
-  // Learning habits (legacy)
-  'reading_books': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'online_courses': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'language_practice': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'skill_development': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'news_reading': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'podcast_listening': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
+  'meditate': require('../assets/images/habit-card-covers/habit-cover-bg-meditate.png'),
 
   // Smart Finance habits
-  'stop_gambling': require('../assets/images/habit_stop_gambling.png'),
-  
-  // Relationships habits (legacy)
-  'family_time': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'friend_check_ins': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'date_night': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'random_acts_of_kindness': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'social_activities': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
-  'quality_conversations': require('../assets/images/habit_background_1.png'), // TODO: Add specific image
+  'stop_gambling': require('../assets/images/habit-card-covers/habit-cover-bg-stop-gambling.png'),
 
   // Life Organization habits
-  'make_your_bed': require('../assets/images/habit_background_1.png'),
-  'organize_home_workspace': require('../assets/images/habit_background_1.png'),
+  'make_your_bed': require('../assets/images/habit-card-covers/habit-cover-bg-make-your-bed.png'),
+  'organize_home_workspace': require('../assets/images/habit-card-covers/habit-cover-bg-organize-home-work.png'),
 };
-
-// Default fallback image
-export const DEFAULT_HABIT_IMAGE = require('../assets/images/habit_background_1.png');
 
 /**
  * Normalizes habit name for image lookup
@@ -97,11 +54,11 @@ export function normalizeHabitName(habitName: string): string {
 
 /**
  * Gets the image source for a habit by its name
- * Returns the mapped image or a default fallback
+ * Returns the mapped image or a fallback image if not found
  */
 export function getHabitImage(habitName: string): ImageSourcePropType {
   const normalizedName = normalizeHabitName(habitName);
-  return HABIT_IMAGES_MAP[normalizedName] || DEFAULT_HABIT_IMAGE;
+  return HABIT_IMAGES_MAP[normalizedName] || require('../assets/images/habit-card-covers/habit-cover-bg-wake-up.png');
 }
 
 /**
@@ -155,7 +112,7 @@ export const HABITS_BY_CATEGORY: HabitCategory[] = [
     id: 'strong_body_strong_mind',
     title: '🔥Strong Body, Strong Mind',
     habits: [
-      { id: 'block_porn_sites', title: 'Block Porn Sites', imageSource: getHabitImage('Block Porn Sites') },
+      { id: 'block_porn_sites', title: 'Block Porn', imageSource: getHabitImage('Block Porn') },
       { id: 'drink_water', title: 'Drink Water', imageSource: getHabitImage('Drink Water') },
       { id: 'work_out', title: 'Work Out', imageSource: getHabitImage('Work Out') },
       { id: 'run_or_walk_outside', title: 'Walk/Run', imageSource: getHabitImage('Walk/Run') },
@@ -179,20 +136,3 @@ export const HABITS_BY_CATEGORY: HabitCategory[] = [
   },
 ];
 
-/**
- * Category cards data for the horizontal scrolling section
- */
-export interface CategoryCard {
-  id: string;
-  title: string;
-  imageSource: ImageSourcePropType;
-}
-
-export const CATEGORY_CARDS: CategoryCard[] = [
-  { id: 'life_organization', title: 'Life Organization', imageSource: require('../assets/images/category_life_organization.png') },
-  { id: 'smart_finance', title: 'Smart Finance', imageSource: getHabitImage('Stop Gambling') },
-  { id: 'strong_body_strong_mind', title: 'Strong Body, Strong Mind', imageSource: getHabitImage('Work Out') },
-  { id: 'mindfulness', title: 'Mindfulness', imageSource: getHabitImage('Meditate') },
-  { id: 'protect_your_focus', title: 'Protect Your Focus', imageSource: getHabitImage('Block Social Media') },
-  { id: 'high_performance', title: 'High Performance', imageSource: getHabitImage('Wake Up Early') },
-];

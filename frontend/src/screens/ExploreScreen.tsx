@@ -8,19 +8,15 @@ import {
   TouchableOpacity,
   Dimensions,
   ImageBackground,
-  FlatList,
-  ImageSourcePropType,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { HABITS_BY_CATEGORY, CATEGORY_CARDS, Habit } from '../data/habitsData';
+import { BlurView } from 'expo-blur';
+import { HABITS_BY_CATEGORY, Habit } from '../data/habitsData';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.48;
 const CARD_HEIGHT = CARD_WIDTH * 1.5;
 const FULL_WIDTH_CARD_WIDTH = width - 48; // Full width minus padding (24 on each side)
-const CATEGORY_CARD_WIDTH = width * 0.6;
-const CATEGORY_CARD_HEIGHT = 100;
 
 interface HabitCardProps {
   habit: Habit;
@@ -59,36 +55,6 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit }) => {
   );
 };
 
-interface CategoryCardProps {
-  title: string;
-  imageSource: ImageSourcePropType;
-}
-
-// Category Card Component - Horizontal orientation
-const CategoryCard: React.FC<CategoryCardProps> = ({ title, imageSource }) => {
-  return (
-    <TouchableOpacity style={styles.categoryCard} activeOpacity={0.85}>
-      <ImageBackground
-        source={imageSource}
-        style={styles.categoryCardBackground}
-        imageStyle={styles.categoryCardImage}
-        resizeMode="cover"
-      >
-        {/* Gradient overlay for premium text readability */}
-        <LinearGradient
-          colors={['rgba(0, 0, 0, 0.3)', 'rgba(0, 0, 0, 0.6)']}
-          style={styles.categoryCardGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-        />
-        <Text style={styles.categoryCardTitle} numberOfLines={2}>
-          {title}
-        </Text>
-      </ImageBackground>
-    </TouchableOpacity>
-  );
-};
-
 // Emoji mapping for each category
 const CATEGORY_EMOJIS: Record<string, string> = {
   'High Performance': '⚡',
@@ -105,13 +71,12 @@ interface CategorySectionProps {
 }
 
 const CategorySection: React.FC<CategorySectionProps> = ({ title, habits }) => {
-  const emoji = title in CATEGORY_EMOJIS ? CATEGORY_EMOJIS[title] : '✨';
-  const displayTitle = emoji ? `${emoji} ${title}` : title;
+  const cleanTitle = title.replace(/[🧠🔥🧘💰🧩⚡]/g, '').trim();
   
   return (
     <View style={styles.categorySection}>
       <Text style={styles.categoryTitle}>
-        {displayTitle}
+        {cleanTitle}
       </Text>
       <ScrollView
         horizontal
@@ -169,56 +134,45 @@ export default function ExploreScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons
-            name="search"
-            size={20}
-            color="#888"
-            style={styles.searchIcon}
-          />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search habits..."
-            placeholderTextColor="#666"
-            autoCapitalize="none"
-            autoCorrect={false}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              onPress={() => setSearchQuery('')}
-              style={styles.clearButton}
-              activeOpacity={0.7}
-            >
+        <View style={styles.searchContainerWrapper}>
+          <BlurView
+            intensity={80}
+            tint="dark"
+            style={styles.searchBlurContainer}
+          >
+            <View style={styles.searchContainer}>
               <Ionicons
-                name="close-circle"
+                name="search"
                 size={20}
                 color="#888"
+                style={styles.searchIcon}
               />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Category Cards Horizontal List - Hide when searching */}
-        {!searchQuery.trim() && (
-          <View style={styles.categoryCardsContainer}>
-            <FlatList
-              data={CATEGORY_CARDS}
-              renderItem={({ item }) => (
-                <CategoryCard title={item.title} imageSource={item.imageSource} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search habits..."
+                placeholderTextColor="#666"
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setSearchQuery('')}
+                  style={styles.clearButton}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="close-circle"
+                    size={20}
+                    color="#888"
+                  />
+                </TouchableOpacity>
               )}
-              keyExtractor={(item) => item.id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryCardsContent}
-              snapToInterval={CATEGORY_CARD_WIDTH + 16}
-              snapToAlignment="start"
-              decelerationRate="fast"
-            />
-          </View>
-        )}
+            </View>
+          </BlurView>
+        </View>
 
         {/* Search Results - Show only habit cards when searching */}
         {searchQuery.trim() ? (
@@ -298,15 +252,31 @@ const styles = StyleSheet.create({
     paddingTop: 110, // Space for fixed title
     paddingBottom: 120, // Space for floating tab bar
   },
+  searchContainerWrapper: {
+    marginHorizontal: 24,
+    marginBottom: 32,
+    alignItems: 'center',
+  },
+  searchBlurContainer: {
+    width: '100%',
+    borderRadius: 36,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A1A1A',
-    borderRadius: 30,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 36,
     height: 48,
     paddingHorizontal: 20,
-    marginHorizontal: 24,
-    marginBottom: 32,
   },
   searchIcon: {
     marginRight: 12,
@@ -321,70 +291,17 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     padding: 4,
   },
-  categoryCardsContainer: {
-    marginBottom: 32,
-  },
-  categoryCardsContent: {
-    paddingLeft: 24,
-    paddingRight: 24,
-    gap: 16,
-  },
-  categoryCard: {
-    width: CATEGORY_CARD_WIDTH,
-    height: CATEGORY_CARD_HEIGHT,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#1C1C1C',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  categoryCardBackground: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#1C1C1C',
-  },
-  categoryCardImage: {
-    width: CATEGORY_CARD_WIDTH,
-    height: CATEGORY_CARD_HEIGHT,
-  },
-  categoryCardGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 12,
-  },
-  categoryCardTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#fff',
-    letterSpacing: -0.5,
-    zIndex: 1,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
   categorySection: {
     marginBottom: 32,
   },
   categoryTitle: {
-    fontSize: 22,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
-    marginBottom: 16,
+    color: '#999',
+    marginBottom: 20,
     paddingHorizontal: 24,
-    letterSpacing: -0.3,
+    letterSpacing: 0.5,
+    textTransform: 'none',
   },
   horizontalScroll: {
     marginLeft: 24,
@@ -396,17 +313,17 @@ const styles = StyleSheet.create({
   habitCard: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#1C1C1C', // Fallback background color
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
   },
   habitCardFullWidth: {
     width: FULL_WIDTH_CARD_WIDTH,
@@ -415,7 +332,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     justifyContent: 'flex-end',
-    padding: 20,
+    padding: 24,
     backgroundColor: '#1C1C1C', // Fallback in case image doesn't load
   },
   habitCardImage: {
@@ -428,15 +345,19 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.25)',
-    borderRadius: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+    borderRadius: 16,
   },
   habitCardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 21,
+    fontWeight: '500',
     color: '#fff',
-    lineHeight: 24,
+    lineHeight: 28,
     zIndex: 1,
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1.5 },
+    textShadowRadius: 3,
   },
   bottomSpacing: {
     height: 20,
