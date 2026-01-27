@@ -27,7 +27,7 @@ export const HABIT_IMAGES_MAP: Record<string, ImageSourcePropType> = {
   'block_porn': require('../assets/images/habit-card-covers/habit-cover-bg-block-porn.png'),
   'drink_water': require('../assets/images/habit-card-covers/habit-cover-bg-drink-water.png'),
   'work_out': require('../assets/images/habit-card-covers/habit-cover-bg-work-out.png'),
-  'run_or_walk_outside': require('../assets/images/habit-card-covers/habit-cover-bg-walk-run.png'),
+  'walk_run': require('../assets/images/habit-card-covers/habit-cover-bg-walk-run.png'),
   'brush_your_teeth': require('../assets/images/habit-card-covers/habit-cover-bg-brush-teeth.png'),
 
   // Mindfulness habits
