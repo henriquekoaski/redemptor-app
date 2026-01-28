@@ -7,6 +7,24 @@ import { Calendar } from 'lucide-react-native';
 const { width } = Dimensions.get('window');
 const MODAL_WIDTH = width * 0.9;
 
+const EMPTY_PLANNER_PHRASES = [
+  'No plans yet. Every day without direction costs you progress.',
+  'Nothing planned yet. Let’s build something great.',
+  'What isn’t planned rarely happens. Add something to your day.',
+  'No excuses. Set your plans and lock them in.',
+  'Your future self will thank you. Add your first entry.',
+  'Big things start here. Add your plans.',
+] as const;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const getEmptyPlannerPhraseForDate = (date: Date): string => {
+  // Deterministic "phrase of the day" that changes every day and is always different day-to-day.
+  const midnightLocal = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayNumber = Math.floor(midnightLocal.getTime() / DAY_MS);
+  const idx = ((dayNumber % EMPTY_PLANNER_PHRASES.length) + EMPTY_PLANNER_PHRASES.length) % EMPTY_PLANNER_PHRASES.length;
+  return EMPTY_PLANNER_PHRASES[idx];
+};
+
 interface Task {
   id: string;
   name: string;
@@ -644,6 +662,11 @@ export default function PlannerScreen() {
     return date.getDate().toString();
   };
 
+  const scheduledTasks = getScheduledTasks();
+  const anytimeTasks = getAnytimeTasks();
+  const isEmptyDay = scheduledTasks.length === 0 && anytimeTasks.length === 0;
+  const emptyPlannerPhrase = getEmptyPlannerPhraseForDate(currentDate);
+
   return (
     <View 
       style={styles.container}
@@ -698,21 +721,25 @@ export default function PlannerScreen() {
       <ScrollView 
         style={styles.tasksContainer} 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.tasksContent}
+        contentContainerStyle={isEmptyDay ? [styles.tasksContent, styles.emptyPlannerContent] : styles.tasksContent}
       >
+        {isEmptyDay && (
+          <Text style={styles.emptyPlannerPhraseText}>{emptyPlannerPhrase}</Text>
+        )}
+
         {/* Scheduled Category */}
-        {getScheduledTasks().length > 0 && (
+        {scheduledTasks.length > 0 && (
           <View style={styles.categorySection}>
             <Text style={styles.categoryTitle}>Scheduled</Text>
-            {getScheduledTasks().map((task) => renderTaskCard(task))}
+            {scheduledTasks.map((task) => renderTaskCard(task))}
           </View>
         )}
 
         {/* Anytime Category */}
-        {getAnytimeTasks().length > 0 && (
+        {anytimeTasks.length > 0 && (
           <View style={styles.categorySection}>
             <Text style={styles.categoryTitle}>Anytime</Text>
-            {getAnytimeTasks().map((task) => renderTaskCard(task))}
+            {anytimeTasks.map((task) => renderTaskCard(task))}
           </View>
         )}
       </ScrollView>
@@ -1226,8 +1253,8 @@ const styles = StyleSheet.create({
   },
   dateContainer: {
     alignItems: 'flex-start',
-    marginTop: 24,
-    marginBottom: 24,
+    marginTop: 16,
+    marginBottom: 20,
   },
   tasksContainer: {
     flex: 1,
@@ -1235,6 +1262,14 @@ const styles = StyleSheet.create({
   },
   tasksContent: {
     paddingBottom: 120,
+  },
+  emptyPlannerContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: 0,
+    paddingHorizontal: 20,
   },
   categorySection: {
     marginBottom: 24,
@@ -1307,18 +1342,18 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   dayName: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '700',
     color: '#FFFFFF',
-    letterSpacing: -0.5,
-    marginBottom: 4,
+    letterSpacing: -0.3,
+    marginBottom: 2,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   date: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '400',
     color: 'rgba(255, 255, 255, 0.7)',
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   dateRow: {
@@ -1332,17 +1367,17 @@ const styles = StyleSheet.create({
   },
   bookmarkContainer: {
     position: 'relative',
-    marginBottom: 8,
+    marginBottom: 6,
     alignSelf: 'flex-start',
-    height: 24,
+    height: 20,
   },
   pennantRectangle: {
     backgroundColor: '#F66729',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    height: 24,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    height: 20,
     justifyContent: 'center',
-    paddingRight: 24,
+    paddingRight: 20,
   },
   vCutoutTop: {
     position: 'absolute',
@@ -1351,8 +1386,8 @@ const styles = StyleSheet.create({
     width: 0,
     height: 0,
     borderTopWidth: 0,
-    borderBottomWidth: 12,
-    borderLeftWidth: 18,
+    borderBottomWidth: 10,
+    borderLeftWidth: 15,
     borderRightWidth: 0,
     borderTopColor: 'transparent',
     borderBottomColor: '#1A1A1A',
@@ -1365,9 +1400,9 @@ const styles = StyleSheet.create({
     right: 0,
     width: 0,
     height: 0,
-    borderTopWidth: 12,
+    borderTopWidth: 10,
     borderBottomWidth: 0,
-    borderLeftWidth: 18,
+    borderLeftWidth: 15,
     borderRightWidth: 0,
     borderTopColor: '#1A1A1A',
     borderBottomColor: 'transparent',
@@ -1375,11 +1410,11 @@ const styles = StyleSheet.create({
     borderRightColor: 'transparent',
   },
   bookmarkText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '600',
     color: '#FFFFFF',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   fab: {
@@ -1872,5 +1907,13 @@ const styles = StyleSheet.create({
   weekDayEmptyText: {
     fontSize: 10,
     color: 'rgba(255, 255, 255, 0.3)',
+  },
+  emptyPlannerPhraseText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.95)',
+    letterSpacing: 0.2,
+    lineHeight: 22,
+    textAlign: 'center',
   },
 });

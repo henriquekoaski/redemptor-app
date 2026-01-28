@@ -2,7 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import CustomTabBar from '../components/CustomTabBar';
 import HomeScreen from '../screens/HomeScreen';
 import PlannerScreen from '../screens/PlannerScreen';
-import ExploreScreen from '../screens/ExploreScreen';
+import ExploreStack from './ExploreStack';
 import ProgressScreen from '../screens/ProgressScreen';
 
 export type TabParamList = {
@@ -53,7 +53,7 @@ export default function TabNavigator() {
       />
       <Tab.Screen
         name="Explore"
-        component={ExploreScreen}
+        component={ExploreStack}
         options={{
           tabBarIcon: () => null, // Icon handled in CustomTabBar
         }}

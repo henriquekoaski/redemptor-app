@@ -11,7 +11,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HABITS_BY_CATEGORY, Habit } from '../data/habitsData';
+import { ExploreStackParamList } from '../navigation/ExploreStack';
+
+type ExploreScreenNavigationProp = NativeStackNavigationProp<ExploreStackParamList, 'HabitDetail'>;
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.48;
@@ -24,9 +29,14 @@ interface HabitCardProps {
 
 // Habit Card Component - Uses organized habit data with image mapping
 const HabitCard: React.FC<HabitCardProps> = ({ habit }) => {
+  const navigation = useNavigation<ExploreScreenNavigationProp>();
   const { title, imageSource, id } = habit;
   const isFullWidth = id === 'meditate' || id === 'stop_gambling';
   const cardWidth = isFullWidth ? FULL_WIDTH_CARD_WIDTH : CARD_WIDTH;
+
+  const handlePress = () => {
+    navigation.navigate('HabitDetail', { habit });
+  };
 
   return (
     <TouchableOpacity 
@@ -35,6 +45,7 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit }) => {
         isFullWidth && styles.habitCardFullWidth
       ]} 
       activeOpacity={0.8}
+      onPress={handlePress}
     >
       <ImageBackground
         source={imageSource}
