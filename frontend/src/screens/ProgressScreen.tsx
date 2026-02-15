@@ -61,13 +61,13 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#0B0B0C',
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 65 : 45,
     paddingBottom: 24,
     paddingHorizontal: 24,
-    backgroundColor: '#000',
+    backgroundColor: '#0B0B0C',
     ...Platform.select({
       ios: {
         shadowColor: '#000',

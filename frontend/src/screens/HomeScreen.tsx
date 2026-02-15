@@ -1,16 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getApiUrl } from '../config/api';
 import { useAuth } from '../context/AuthContext';
+import { RootStackParamList } from '../navigation/AppNavigator';
 
-type RootStackParamList = {
-  SignIn: undefined;
-  Home: undefined;
-};
-
-type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const ASTON_MARTIN_GREEN = '#418b61';
 
@@ -21,7 +17,13 @@ export default function HomeScreen() {
 
   const handleSignOut = () => {
     signOut();
-    navigation.navigate('SignIn');
+    // Reset navigation stack and navigate to Auth (which shows SignIn as initial route)
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'Auth' }],
+      })
+    );
   };
 
   useEffect(() => {
@@ -60,7 +62,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#000",
+    backgroundColor: "#0B0B0C",
     padding: 24,
     paddingBottom: 100, // Space for floating tab bar
   },

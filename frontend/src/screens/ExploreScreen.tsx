@@ -224,7 +224,7 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#0B0B0C',
   },
   fixedTitleContainer: {
     position: 'absolute',
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     paddingTop: 65,
     paddingBottom: 8,
     paddingHorizontal: 24,
-    backgroundColor: '#000',
+    backgroundColor: '#0B0B0C',
     zIndex: 1000,
     shadowColor: '#000',
     shadowOffset: {

@@ -32,8 +32,6 @@ interface Task {
   isTimed: boolean;
   time: string;
   isRepeat: boolean;
-  repeatSameDay: boolean;
-  sameDayTimes: string[];
   repeatWeek: boolean;
   selectedDays: number[];
   createdAt: Date;
@@ -53,8 +51,6 @@ export default function PlannerScreen() {
   const [isTimed, setIsTimed] = useState(false);
   const [taskTime, setTaskTime] = useState('');
   const [isRepeat, setIsRepeat] = useState(false);
-  const [repeatSameDay, setRepeatSameDay] = useState(false);
-  const [sameDayTimes, setSameDayTimes] = useState(['']);
   const [repeatWeek, setRepeatWeek] = useState(false);
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   
@@ -73,11 +69,15 @@ export default function PlannerScreen() {
   const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   
   useEffect(() => {
+    if (!showTaskModal) return;
+    
     const keyboardWillShow = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       (e) => {
+        // Move modal up by keyboard height, slightly more to reduce any gap
+        const offset = -e.endCoordinates.height - 5;
         Animated.timing(keyboardOffset, {
-          toValue: -e.endCoordinates.height / 2,
+          toValue: offset,
           duration: e.duration || 250,
           useNativeDriver: false,
         }).start();
@@ -99,7 +99,7 @@ export default function PlannerScreen() {
       keyboardWillShow.remove();
       keyboardWillHide.remove();
     };
-  }, []);
+  }, [showTaskModal]);
   
   // Swipe gesture tracking
   const touchStartX = useRef<number | null>(null);
@@ -278,8 +278,6 @@ export default function PlannerScreen() {
       setIsTimed(false);
       setTaskTime('');
       setIsRepeat(false);
-      setRepeatSameDay(false);
-      setSameDayTimes(['']);
       setRepeatWeek(false);
       setSelectedDays([]);
       // Reset animated values
@@ -301,8 +299,6 @@ export default function PlannerScreen() {
       isTimed,
       time: taskTime,
       isRepeat,
-      repeatSameDay,
-      sameDayTimes: sameDayTimes.filter(t => t.trim() !== ''),
       repeatWeek,
       selectedDays,
       createdAt: new Date(),
@@ -321,10 +317,6 @@ export default function PlannerScreen() {
         return task.createdAt.toDateString() === currentDateStr;
       }
       
-      if (task.repeatSameDay && task.sameDayTimes.length > 0) {
-        return true;
-      }
-      
       if (task.repeatWeek && task.selectedDays.includes(currentDayOfWeek)) {
         return true;
       }
@@ -335,11 +327,8 @@ export default function PlannerScreen() {
 
   const getAnytimeTasks = () => {
     return getTasksForCurrentDate().filter(task => {
-      // Tasks without time or without scheduled times
+      // Tasks without time
       if (task.isTimed && task.time) {
-        return false;
-      }
-      if (task.repeatSameDay && task.sameDayTimes.length > 0) {
         return false;
       }
       return true;
@@ -348,11 +337,8 @@ export default function PlannerScreen() {
 
   const getScheduledTasks = () => {
     return getTasksForCurrentDate().filter(task => {
-      // Tasks with time or scheduled times
+      // Tasks with time
       if (task.isTimed && task.time) {
-        return true;
-      }
-      if (task.repeatSameDay && task.sameDayTimes.length > 0) {
         return true;
       }
       return false;
@@ -380,9 +366,6 @@ export default function PlannerScreen() {
             )}
             {task.isRepeat && (
               <View style={styles.taskRepeatContainer}>
-                {task.repeatSameDay && task.sameDayTimes.length > 0 && (
-                  <Text style={styles.taskRepeatText}>Daily</Text>
-                )}
                 {task.repeatWeek && task.selectedDays.length > 0 && (
                   <Text style={styles.taskRepeatText}>Weekly</Text>
                 )}
@@ -393,16 +376,6 @@ export default function PlannerScreen() {
       </BlurView>
     </View>
   );
-
-  const addSameDayTime = () => {
-    setSameDayTimes([...sameDayTimes, '']);
-  };
-
-  const updateSameDayTime = (index: number, value: string) => {
-    const newTimes = [...sameDayTimes];
-    newTimes[index] = value;
-    setSameDayTimes(newTimes);
-  };
 
   const toggleDay = (dayIndex: number) => {
     if (selectedDays.includes(dayIndex)) {
@@ -424,10 +397,6 @@ export default function PlannerScreen() {
     return tasks.filter(task => {
       if (!task.isRepeat) {
         return task.createdAt.toDateString() === dateStr;
-      }
-      
-      if (task.repeatSameDay && task.sameDayTimes.length > 0) {
-        return true;
       }
       
       if (task.repeatWeek && task.selectedDays.includes(dayOfWeek)) {
@@ -759,25 +728,25 @@ export default function PlannerScreen() {
         onRequestClose={closeTaskModal}
       >
         <Pressable style={styles.modalOverlay} onPress={closeTaskModal}>
-          <Animated.View
-            style={[
-              styles.modalContainer,
-              {
-                transform: [
-                  {
-                    translateY: Animated.add(modalTranslateY, keyboardOffset),
-                  },
-                ],
-              },
-            ]}
-          >
-            <Pressable onPress={(e) => e.stopPropagation()}>
-              <BlurView
-                intensity={80}
-                tint="dark"
-                style={styles.modalBlur}
-              >
-                <View style={styles.modalContent}>
+            <Animated.View
+              style={[
+                styles.modalContainer,
+                {
+                  transform: [
+                    {
+                      translateY: Animated.add(modalTranslateY, keyboardOffset),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <Pressable onPress={(e) => e.stopPropagation()}>
+                <BlurView
+                  intensity={80}
+                  tint="dark"
+                  style={styles.modalBlur}
+                >
+                  <View style={styles.modalContent}>
                   <View style={styles.modalHeader}>
                     <View style={styles.headerFieldsContainer}>
                       {/* Name Field */}
@@ -851,42 +820,6 @@ export default function PlannerScreen() {
 
                       {isRepeat && (
                         <>
-                          {/* In this same day */}
-                          <View style={styles.subSection}>
-                            <View style={styles.toggleRow}>
-                              <Text style={styles.fieldLabel}>In this same day</Text>
-                              <Switch
-                                value={repeatSameDay}
-                                onValueChange={setRepeatSameDay}
-                                trackColor={{ false: 'rgba(255, 255, 255, 0.2)', true: '#F66729' }}
-                                thumbColor="#FFFFFF"
-                                ios_backgroundColor="rgba(255, 255, 255, 0.2)"
-                              />
-                            </View>
-                            {repeatSameDay && (
-                              <View style={styles.timesList}>
-                                {sameDayTimes.map((time, index) => (
-                                  <View key={index} style={styles.timeRow}>
-                                    <View style={styles.timeRowInput}>
-                                      <TextInput
-                                        style={styles.timeInput}
-                                        placeholder="2:30 PM"
-                                        placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                                        value={time}
-                                        onChangeText={(value) => updateSameDayTime(index, value)}
-                                      />
-                                    </View>
-                                    {index === sameDayTimes.length - 1 && (
-                                      <TouchableOpacity style={styles.addTimeButton} onPress={addSameDayTime}>
-                                        <Ionicons name="add" size={20} color="#FFFFFF" />
-                                      </TouchableOpacity>
-                                    )}
-                                  </View>
-                                ))}
-                              </View>
-                            )}
-                          </View>
-
                           {/* In this week */}
                           <View style={styles.subSection}>
                             <View style={styles.toggleRow}>
@@ -1092,12 +1025,10 @@ export default function PlannerScreen() {
                       const dayTasks = getTasksForDate(day);
                       const scheduledTasks = dayTasks.filter(task => {
                         if (task.isTimed && task.time) return true;
-                        if (task.repeatSameDay && task.sameDayTimes.length > 0) return true;
                         return false;
                       });
                       const anytimeTasks = dayTasks.filter(task => {
                         if (task.isTimed && task.time) return false;
-                        if (task.repeatSameDay && task.sameDayTimes.length > 0) return false;
                         return true;
                       });
                       const isToday = isSameDay(day, new Date());
@@ -1142,11 +1073,6 @@ export default function PlannerScreen() {
                                     </Text>
                                     {task.isTimed && task.time && (
                                       <Text style={styles.weekDayTaskTime}>{task.time}</Text>
-                                    )}
-                                    {task.repeatSameDay && task.sameDayTimes.length > 0 && (
-                                      <Text style={styles.weekDayTaskTime}>
-                                        {task.sameDayTimes.length} time{task.sameDayTimes.length > 1 ? 's' : ''}
-                                      </Text>
                                     )}
                                   </View>
                                 </View>
@@ -1204,7 +1130,7 @@ export default function PlannerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#0B0B0C',
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingHorizontal: 24,
   },
@@ -1390,7 +1316,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 15,
     borderRightWidth: 0,
     borderTopColor: 'transparent',
-    borderBottomColor: '#1A1A1A',
+    borderBottomColor: '#0B0B0C',
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
   },
@@ -1404,7 +1330,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     borderLeftWidth: 15,
     borderRightWidth: 0,
-    borderTopColor: '#1A1A1A',
+    borderTopColor: '#0B0B0C',
     borderBottomColor: 'transparent',
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
@@ -1439,14 +1365,14 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    paddingBottom: Platform.OS === 'ios' ? 20 : 10,
+    paddingBottom: 0,
   },
   modalContainer: {
     width: MODAL_WIDTH,
-    marginBottom: 20,
+    marginBottom: 0,
   },
   modalBlur: {
     borderRadius: 36,
